@@ -1,12 +1,12 @@
 # agents/payment-agent-policy.yaml
-# 支付/花费代理策略：设定花费上限，限额内随便调用
+# Payment agent policy: set spending limits, free use within limits
 version: "1"
 scope: agent
 target: "payment-agent"
-defaultEffect: allow   # 限额内全部放行
+defaultEffect: allow   # allow all within limits
 
 rules:
-  # 允许所有支付相关操作（限额由 budget 控制）
+  # Allow all payment-related operations (limits enforced by budget)
   - id: allow-payment
     priority: 10
     match:
@@ -19,26 +19,26 @@ rules:
       action: "call:transfer-api"
     effect: allow
 
-# ── 花费上限（超出则自动阻断）────────────────────────────────
+# ── Spending limits (auto-block when exceeded) ────────────────
 budget:
   daily:
-    moneyCny: 500       # 每日上限 500 元，限额内随便花
-    calls: 200          # 每日调用次数上限
+    moneyCny: 500       # daily limit: 500 CNY — free use within limit
+    calls: 200          # daily call limit: 200
   monthly:
-    moneyCny: 5000      # 每月上限 5000 元
+    moneyCny: 5000      # monthly limit: 5000 CNY
   singleOp:
-    moneyCny: 1000      # 单笔上限 1000 元
+    moneyCny: 1000      # per-transaction limit: 1000 CNY
 
-# ── 频率限制（防止短时间内爆发式调用耗尽限额）────────────────
+# ── Rate limits (prevent burst usage from exhausting budget) ──
 rateLimits:
   - action: "call:payment-api"
     window: 1m
-    maxCount: 10        # 每分钟最多 10 笔，限额内可持续调用
+    maxCount: 10        # max 10 payments/min — sustained use within limit is fine
   - action: "call:transfer-api"
     window: 1m
     maxCount: 5
 
-# ── 时间窗口：凌晨禁止支付（异常时段保护）────────────────────
+# ── Time window: block payments during off-hours ──────────────
 timeRestrictions:
   - id: block-payment-night
     action: "call:*"
@@ -48,4 +48,3 @@ timeRestrictions:
       start: "00:00"
       end: "06:00"
       timezone: "Asia/Shanghai"
-

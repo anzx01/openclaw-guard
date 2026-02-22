@@ -1,5 +1,5 @@
 // src/utils/pii-scrubber.js
-// PII 脱敏工具
+// PII scrubbing utility
 
 const BUILT_IN_PATTERNS = [
   { name: 'phone_cn',    pattern: /1[3-9]\d{9}/g,                          mask: (m) => m.slice(0, 3) + '****' + m.slice(-4) },
@@ -24,7 +24,7 @@ export class PiiScrubber {
   }
 
   /**
-   * 对字符串进行脱敏
+   * Scrub PII from a string
    * @param {string} text
    * @returns {string}
    */
@@ -39,7 +39,7 @@ export class PiiScrubber {
   }
 
   /**
-   * 对对象的所有字符串字段递归脱敏
+   * Recursively scrub PII from all string fields in an object
    * @param {unknown} obj
    * @returns {unknown}
    */

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // src/cli/index.js
-// CLI 工具入口
+// CLI entry point
 
 import { createGuard, VERSION } from '../index.js';
 import * as fs from 'fs';
@@ -10,17 +10,17 @@ const HELP = `
 openclaw-guard v${VERSION}
 
 Usage:
-  openclaw-guard audit [--config <path>]     查询审计日志
-  openclaw-guard status [--config <path>]    查看预算状态
-  openclaw-guard validate <policy-file>      验证策略文件语法
-  openclaw-guard --help                      显示帮助
-  openclaw-guard --version                   显示版本
+  openclaw-guard audit [--config <path>]     Query audit log
+  openclaw-guard status [--config <path>]    Show budget status
+  openclaw-guard validate <policy-file>      Validate policy file syntax
+  openclaw-guard --help                      Show help
+  openclaw-guard --version                   Show version
 
 Options:
-  --config <path>    配置文件路径（默认: ./security-config.yaml）
-  --agent <id>       过滤指定代理
-  --limit <n>        返回最近 N 条记录（默认: 50）
-  --decision <v>     过滤决策结果: allow | deny
+  --config <path>    Config file path (default: ./security-config.yaml)
+  --agent <id>       Filter by agent ID
+  --limit <n>        Return last N records (default: 50)
+  --decision <v>     Filter by decision: allow | deny
 `;
 
 async function main() {
@@ -45,7 +45,7 @@ async function main() {
   }
 
   if (!configPath) {
-    console.error('错误: 未找到配置文件。请使用 --config 指定路径，或在当前目录创建 security-config.yaml');
+    console.error('Error: config file not found. Use --config to specify a path, or create security-config.yaml in the current directory');
     process.exit(1);
   }
 
@@ -54,7 +54,7 @@ async function main() {
   } else if (cmd === 'status') {
     await cmdStatus(configPath, args);
   } else {
-    console.error(`未知命令: ${cmd}`);
+    console.error(`Unknown command: ${cmd}`);
     console.log(HELP);
     process.exit(1);
   }
@@ -71,9 +71,9 @@ async function cmdAudit(configPath, args) {
   try {
     const entries = guard.auditLogger.query(filter);
     if (entries.length === 0) {
-      console.log('暂无审计日志记录');
+      console.log('No audit log entries found');
     } else {
-      console.log(`\n审计日志（最近 ${entries.length} 条）:\n`);
+      console.log(`\nAudit log (last ${entries.length} entries):\n`);
       for (const e of entries) {
         const time = new Date(e.timestamp).toISOString();
         const icon = e.decision === 'allow' ? '✓' : '✗';
@@ -91,26 +91,26 @@ async function cmdStatus(configPath, args) {
 
   try {
     if (!agentId) {
-      console.log('请使用 --agent <id> 指定代理 ID');
+      console.log('Please specify an agent ID with --agent <id>');
       return;
     }
 
-    // 从审计日志中统计该代理最近的决策分布
+    // Summarize recent decisions for this agent from audit log
     const entries = guard.auditLogger.query({ agentId, limit: 1000 });
     const total = entries.length;
     const denied = entries.filter((e) => e.decision === 'deny').length;
     const allowed = total - denied;
 
-    console.log(`\n代理 ${agentId} 状态:\n`);
-    console.log(`  审计记录总数: ${total}`);
-    console.log(`  放行: ${allowed}  拒绝: ${denied}`);
+    console.log(`\nAgent ${agentId} status:\n`);
+    console.log(`  Total audit records: ${total}`);
+    console.log(`  Allowed: ${allowed}  Denied: ${denied}`);
 
     if (total > 0) {
       const last = entries[entries.length - 1];
-      console.log(`  最近操作: ${new Date(last.timestamp).toISOString()} action=${last.action} decision=${last.decision}`);
+      console.log(`  Latest: ${new Date(last.timestamp).toISOString()} action=${last.action} decision=${last.decision}`);
     }
 
-    console.log(`\n  队列深度: ${guard.auditLogger.queueDepth}  溢出次数: ${guard.auditLogger.overflowCount}`);
+    console.log(`\n  Queue depth: ${guard.auditLogger.queueDepth}  Overflow count: ${guard.auditLogger.overflowCount}`);
   } finally {
     await guard.close();
   }
@@ -118,11 +118,11 @@ async function cmdStatus(configPath, args) {
 
 async function cmdValidate(policyFile) {
   if (!policyFile) {
-    console.error('请指定策略文件路径: openclaw-guard validate <policy-file>');
+    console.error('Please specify a policy file: openclaw-guard validate <policy-file>');
     process.exit(1);
   }
   if (!fs.existsSync(policyFile)) {
-    console.error(`文件不存在: ${policyFile}`);
+    console.error(`File not found: ${policyFile}`);
     process.exit(1);
   }
 
@@ -135,22 +135,22 @@ async function cmdValidate(policyFile) {
     const data = yaml.load(raw);
 
     const errors = [];
-    if (!data?.version) errors.push('缺少 version 字段');
-    if (!data?.scope) errors.push('缺少 scope 字段');
-    if (data?.scope === 'agent' && !data?.target) errors.push('scope=agent 时 target 必填');
+    if (!data?.version) errors.push('Missing version field');
+    if (!data?.scope) errors.push('Missing scope field');
+    if (data?.scope === 'agent' && !data?.target) errors.push('target is required when scope=agent');
     for (const tr of data?.timeRestrictions ?? []) {
-      if (!tr.schedule?.timezone) errors.push(`时间规则 ${tr.id} 缺少 timezone`);
+      if (!tr.schedule?.timezone) errors.push(`Time restriction ${tr.id} is missing timezone`);
     }
 
     if (errors.length > 0) {
-      console.error('策略文件验证失败:');
+      console.error('Policy validation failed:');
       errors.forEach((e) => console.error(`  - ${e}`));
       process.exit(1);
     } else {
-      console.log(`✓ 策略文件验证通过: ${policyFile}`);
+      console.log(`✓ Policy file is valid: ${policyFile}`);
     }
   } catch (err) {
-    console.error(`策略文件解析失败: ${err.message}`);
+    console.error(`Policy file parse error: ${err.message}`);
     process.exit(1);
   }
 }
@@ -176,6 +176,6 @@ function findConfig() {
 }
 
 main().catch((err) => {
-  console.error('错误:', err.message);
+  console.error('Error:', err.message);
   process.exit(1);
 });

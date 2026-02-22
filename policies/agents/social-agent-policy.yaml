@@ -1,12 +1,12 @@
 # agents/social-agent-policy.yaml
-# 社交/发帖代理策略：防止乱发帖
+# Social/posting agent policy: prevent unauthorized posting
 version: "1"
 scope: agent
 target: "social-agent"
 defaultEffect: allow
 
 rules:
-  # 禁止直接发布到社交媒体（需人工审批）
+  # Block direct publishing to social media (requires human approval)
   - id: deny-auto-publish
     priority: 1
     match:
@@ -14,7 +14,7 @@ rules:
       params:
         method: "POST"
     effect: deny
-    reason: "禁止自动发推，所有发帖需人工确认"
+    reason: "Auto-posting to Twitter is disabled; all posts require human approval"
 
   - id: deny-weibo-post
     priority: 1
@@ -23,16 +23,16 @@ rules:
       params:
         method: "POST"
     effect: deny
-    reason: "禁止自动发微博"
+    reason: "Auto-posting to Weibo is disabled"
 
   - id: deny-mass-email
     priority: 1
     match:
       action: "send:email"
     effect: deny
-    reason: "禁止自动发送邮件，请通过审批流程"
+    reason: "Automated email sending is disabled; use the approval workflow"
 
-  # 允许读取/查询操作
+  # Allow read/query operations
   - id: allow-social-read
     priority: 10
     match:
@@ -41,11 +41,11 @@ rules:
         method: "GET"
     effect: allow
 
-# 频率限制：即使允许的操作也要限速
+# Rate limits: throttle even allowed operations
 rateLimits:
   - action: "call:*"
     window: 1m
-    maxCount: 10      # 每分钟最多 10 次 API 调用
+    maxCount: 10      # max 10 API calls/min
   - action: "call:*"
     window: 1h
-    maxCount: 100     # 每小时最多 100 次
+    maxCount: 100     # max 100 API calls/hour

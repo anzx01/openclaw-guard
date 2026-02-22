@@ -1,18 +1,18 @@
 // src/budget/budget-controller.js
-// 预算与频率控制器（Redis 原子操作）
+// Budget and rate-limit controller (Redis atomic operations)
 
 import { createHash } from 'crypto';
 
-/** 将 "1m" / "1h" / "1s" 转换为毫秒 */
+/** Parse window string like "1m" / "1h" / "1s" to milliseconds */
 function parseWindow(w) {
   const n = parseInt(w);
   if (w.endsWith('s')) return n * 1000;
   if (w.endsWith('m')) return n * 60 * 1000;
   if (w.endsWith('h')) return n * 3600 * 1000;
-  throw new Error(`无效的时间窗口格式: ${w}`);
+  throw new Error(`Invalid window format: ${w}`);
 }
 
-/** Redis Lua 脚本：原子 check-and-increment */
+/** Redis Lua script: atomic check-and-increment */
 const LUA_CHECK_INCR = `
 local key = KEYS[1]
 local limit = tonumber(ARGV[1])
@@ -40,7 +40,7 @@ export class BudgetController {
   }
 
   /**
-   * 检查预算与频率限制
+   * Check budget and rate limits
    * @param {import('../types.js').RequestContext} ctx
    * @returns {Promise<import('../types.js').GuardResult>}
    */
@@ -48,7 +48,7 @@ export class BudgetController {
     const config = this.agentConfigs.get(ctx.agentId);
     if (!config) return { decision: 'allow' };
 
-    // 1. 频率限制检查
+    // 1. Rate limit check
     if (config.rateLimits) {
       for (const rl of config.rateLimits) {
         if (!this.#matchAction(ctx.action, rl.action)) continue;
@@ -57,22 +57,22 @@ export class BudgetController {
       }
     }
 
-    // 2. 单次操作预算检查（仅资金类）
+    // 2. Single-op budget check (money only)
     if (config.budget?.singleOp) {
       const cost = this.#extractCost(ctx);
       const limit = config.budget.singleOp;
       if (cost.moneyCny && limit.moneyCny && cost.moneyCny > limit.moneyCny) {
-        return { decision: 'deny', reason: `单笔金额 ${cost.moneyCny} 超过限额 ${limit.moneyCny} CNY` };
+        return { decision: 'deny', reason: `Single-op amount ${cost.moneyCny} exceeds limit ${limit.moneyCny} CNY` };
       }
     }
 
-    // 3. 每日预算检查
+    // 3. Daily budget check
     if (config.budget?.daily) {
       const result = await this.#checkBudget(ctx, 'daily', config.budget.daily);
       if (result.decision === 'deny') return result;
     }
 
-    // 4. 每月预算检查
+    // 4. Monthly budget check
     if (config.budget?.monthly) {
       const result = await this.#checkBudget(ctx, 'monthly', config.budget.monthly);
       if (result.decision === 'deny') return result;
@@ -82,7 +82,7 @@ export class BudgetController {
   }
 
   /**
-   * 请求成功后扣减预算
+   * Deduct budget after a successful request
    * @param {import('../types.js').RequestContext} ctx
    * @param {import('../types.js').RequestResult} result
    */
@@ -102,14 +102,14 @@ export class BudgetController {
     }
   }
 
-  // ─── 频率限制（滑动窗口，Redis Sorted Set）─────────────────
+  // ─── Rate limiting (sliding window, Redis Sorted Set) ──────────
 
   async #checkRateLimit(ctx, rl) {
     const windowMs = parseWindow(rl.window);
     const now = Date.now();
     const key = `guard:rate:${ctx.agentId}:${rl.action}:${rl.window}`;
 
-    // 幂等键防重复计数
+    // Idempotency key to prevent double-counting
     const idempotencyKey = this.#idempotencyKey(ctx);
 
     const pipeline = this.redis.pipeline();
@@ -123,13 +123,13 @@ export class BudgetController {
     if (count >= rl.maxCount) {
       return {
         decision: 'deny',
-        reason: `操作 ${rl.action} 超过频率限制：${rl.window} 内最多 ${rl.maxCount} 次`,
+        reason: `Action ${rl.action} exceeded rate limit: max ${rl.maxCount} per ${rl.window}`,
       };
     }
     return { decision: 'allow' };
   }
 
-  // ─── 预算检查（Lua 原子操作）──────────────────────────────
+  // ─── Budget check (Lua atomic operation) ───────────────────────
 
   async #checkBudget(ctx, period, limit) {
     const now = new Date();
@@ -137,18 +137,18 @@ export class BudgetController {
     const ttl = period === 'daily' ? this.#dailyTTL(now) : this.#monthlyTTL(now);
     const cost = this.#extractCost(ctx);
 
-    // 检查 token 预算
+    // Check token budget
     if (limit.tokens && cost.tokens) {
       const key = `guard:budget:${ctx.agentId}:${period}:tokens:${periodKey}`;
       const r = await this.redis.eval(LUA_CHECK_INCR, 1, key, limit.tokens, cost.tokens, ttl);
-      if (r === -1) return { decision: 'deny', reason: `${period} token 预算已耗尽` };
+      if (r === -1) return { decision: 'deny', reason: `${period} token budget exhausted` };
     }
 
-    // 检查调用次数预算
+    // Check call count budget
     if (limit.calls) {
       const key = `guard:budget:${ctx.agentId}:${period}:calls:${periodKey}`;
       const r = await this.redis.eval(LUA_CHECK_INCR, 1, key, limit.calls, 1, ttl);
-      if (r === -1) return { decision: 'deny', reason: `${period} 调用次数预算已耗尽` };
+      if (r === -1) return { decision: 'deny', reason: `${period} call budget exhausted` };
     }
 
     return { decision: 'allow' };
@@ -167,7 +167,7 @@ export class BudgetController {
     await pipeline.exec();
   }
 
-  // ─── 剩余预算查询（用于告警）─────────────────────────────
+  // ─── Remaining budget query (for alerts) ───────────────────────
 
   async getRemainingBudget(agentId) {
     const config = this.agentConfigs.get(agentId);
@@ -179,7 +179,7 @@ export class BudgetController {
     return { used, limit, remaining: limit - used, ratio: used / limit };
   }
 
-  // ─── 辅助方法 ─────────────────────────────────────────────
+  // ─── Helpers ────────────────────────────────────────────────────
 
   #matchAction(action, pattern) {
     if (pattern === '*') return true;

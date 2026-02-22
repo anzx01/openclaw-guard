@@ -1,5 +1,5 @@
 // src/engine/rule-engine.js
-// 规则匹配与决策
+// Rule matching and decision engine
 
 import micromatch from 'micromatch';
 
@@ -10,7 +10,7 @@ export class RuleEngine {
   }
 
   /**
-   * 评估请求是否允许
+   * Evaluate whether the request is allowed
    * @param {import('../types.js').RequestContext} ctx
    * @returns {import('../types.js').GuardResult}
    */
@@ -28,10 +28,10 @@ export class RuleEngine {
 
     if (matched.length === 0) {
       const defaultEffect = policies[0]?.defaultEffect ?? 'deny';
-      return { decision: defaultEffect === 'allow' ? 'allow' : 'deny', reason: '无匹配规则，使用默认策略' };
+      return { decision: defaultEffect === 'allow' ? 'allow' : 'deny', reason: 'No matching rule, using default policy' };
     }
 
-    // 排序：priority 小的优先；同 priority 时 deny 优先；细粒度策略优先
+    // Sort: lower priority wins; deny beats allow at same priority; agent policy beats global
     matched.sort((a, b) => {
       if (a.rule.priority !== b.rule.priority) return a.rule.priority - b.rule.priority;
       if (a.rule.effect !== b.rule.effect) return a.rule.effect === 'deny' ? -1 : 1;
@@ -47,7 +47,7 @@ export class RuleEngine {
   }
 
   /**
-   * 域名过滤（仅对含 URL 的请求生效）
+   * Domain filter — only applies to requests with a URL target
    * @param {import('../types.js').RequestContext} ctx
    * @returns {import('../types.js').GuardResult|null}
    */
@@ -67,10 +67,10 @@ export class RuleEngine {
       const matched = list.some((p) => micromatch.isMatch(hostname, p));
 
       if (mode === 'whitelist' && !matched) {
-        return { decision: 'deny', reason: `域名 ${hostname} 不在白名单中` };
+        return { decision: 'deny', reason: `Domain ${hostname} is not in the whitelist` };
       }
       if (mode === 'blacklist' && matched) {
-        return { decision: 'deny', reason: `域名 ${hostname} 命中黑名单` };
+        return { decision: 'deny', reason: `Domain ${hostname} is in the blacklist` };
       }
     }
     return null;

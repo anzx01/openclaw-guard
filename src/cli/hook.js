@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 // src/cli/hook.js
-// OpenClaw PreToolUse / before_tool_use 钩子入口
-// 通过 stdin 接收 JSON，通过 stdout 输出决策
+// OpenClaw PreToolUse / before_tool_use hook entry point
+// Receives JSON via stdin, outputs decision via stdout
 
 import { createGuard } from '../index.js';
 import * as path from 'path';
 import * as fs from 'fs';
 import { fileURLToPath } from 'url';
 
-// ─── 插件自身防篡改 ───────────────────────────────────────────
-// 获取本插件的根目录（绝对路径）
+// ─── Plugin self-protection ─────────────────────────────────────
+// Absolute path to this plugin root
 const PLUGIN_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-// 插件核心文件列表（相对于 PLUGIN_ROOT）
+// Protected plugin files (relative to PLUGIN_ROOT)
 const PROTECTED_PLUGIN_FILES = [
   'src/cli/hook.js',
   'src/cli/index.js',
@@ -30,9 +30,9 @@ const PROTECTED_PLUGIN_FILES = [
 ];
 
 /**
- * 检查目标文件是否是插件自身的受保护文件
+ * Check if the target file is a protected plugin file.
  * @param {string} filePath
- * @returns {string|null} 匹配的相对路径，或 null
+ * @returns {string|null} matched relative path, or null
  */
 function isPluginFile(filePath) {
   if (!filePath) return null;
@@ -40,7 +40,7 @@ function isPluginFile(filePath) {
   for (const rel of PROTECTED_PLUGIN_FILES) {
     if (abs === path.join(PLUGIN_ROOT, rel)) return rel;
   }
-  // 保护整个 src/ 目录
+  // Protect the entire src/ directory
   const srcDir = path.join(PLUGIN_ROOT, 'src');
   if (abs.startsWith(srcDir + path.sep)) {
     return path.relative(PLUGIN_ROOT, abs);
@@ -64,7 +64,7 @@ function allow() {
 }
 
 async function main() {
-  // 读取 stdin
+  // Read stdin
   let raw = '';
   for await (const chunk of process.stdin) raw += chunk;
 
@@ -72,8 +72,8 @@ async function main() {
   try {
     input = JSON.parse(raw);
   } catch {
-    // JSON 解析失败：无法判断意图，fail-closed 拒绝
-    deny('[SecurityGuard] 无法解析请求，已拒绝');
+    // Cannot parse input — intent unknown, deny (fail-closed)
+    deny('[SecurityGuard] Cannot parse request, denied');
     return;
   }
 
@@ -81,20 +81,20 @@ async function main() {
   const toolInput = input.tool_input ?? {};
   const filePath = toolInput.file_path ?? toolInput.filePath ?? '';
 
-  // ── 插件自身防篡改检查（最高优先级，在所有其他检查之前）──────
+  // ── Plugin self-protection (highest priority, before all other checks) ──────
   const matchedFile = isPluginFile(filePath);
   if (matchedFile) {
     const tool = toolName.toLowerCase();
     if (tool === 'write' || tool === 'edit' || tool === 'delete') {
-      deny(`[SecurityGuard 自我保护] 禁止修改或删除插件文件: ${matchedFile}。插件文件不可修改，如需升级请通过官方渠道重新安装。`);
+      deny(`[SecurityGuard self-protection] Modification of plugin file denied: ${matchedFile}. Plugin files are immutable; reinstall via the official channel to upgrade.`);
       return;
     }
   }
 
-  // 查找配置文件（从当前目录向上查找）
+  // Find config file (walk up from cwd)
   const configPath = findConfig();
   if (!configPath) {
-    allow(); // 无配置时放行
+    allow(); // No config found — allow
     return;
   }
 
@@ -102,12 +102,12 @@ async function main() {
   try {
     guard = await createGuard(configPath);
   } catch (err) {
-    console.error('[SecurityGuard] 初始化失败:', err.message);
+    console.error('[SecurityGuard] Initialization failed:', err.message);
     allow();
     return;
   }
 
-  // 将 OpenClaw hook 输入转换为 RequestContext
+  // Map OpenClaw hook input to RequestContext
   const agentId = input.agent_id ?? input.agentId ?? 'unknown';
 
   const ctx = {
@@ -123,13 +123,13 @@ async function main() {
   await guard.close();
 
   if (result.decision === 'deny') {
-    deny(result.reason ?? '请求被安全策略拒绝');
+    deny(result.reason ?? 'Request denied by security policy');
   } else {
     allow();
   }
 }
 
-/** 将 OpenClaw 工具名映射为 action 格式 */
+/** Map OpenClaw tool name to action string */
 function mapToolToAction(toolName, toolInput) {
   const tool = toolName.toLowerCase();
   if (tool === 'write' || tool === 'edit') return `write:file`;
@@ -141,7 +141,7 @@ function mapToolToAction(toolName, toolInput) {
   return `tool:${tool}`;
 }
 
-/** 从当前目录向上查找 security-config.yaml */
+/** Walk up from cwd to find security-config.yaml */
 function findConfig() {
   const names = ['security-config.yaml', 'security-config.yml', '.security-guard.yaml'];
   let dir = process.cwd();
@@ -158,6 +158,6 @@ function findConfig() {
 }
 
 main().catch((err) => {
-  console.error('[SecurityGuard] 钩子异常:', err.message);
-  process.exit(0); // 异常时放行，避免阻断所有操作
+  console.error('[SecurityGuard] Hook error:', err.message);
+  process.exit(0); // On error, allow to avoid blocking all operations
 });

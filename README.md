@@ -2,47 +2,45 @@
 
 Universal security control plugin for OpenClaw agents.
 
-**四大核心保护：**
-- 💰 **不乱花钱** — 设定 token/调用次数/金额上限，限额内随便用，超出自动阻断
-- 📢 **不乱发帖** — 发帖/发邮件默认拒绝，需在策略中显式授权
-- 🗑️ **不乱删文件** — 所有删除操作全局拦截
-- 🔒 **插件防篡改** — 插件自身文件完全锁定，不可被代理修改
+**Four core protections:**
+- 💰 **No overspending** — Set token/call/money limits. Free use within limits; auto-block when exceeded.
+- 📢 **No unauthorized posting** — POST/email actions denied by default; must be explicitly allowed in policy.
+- 🗑️ **No file deletion** — All delete operations blocked globally.
+- 🔒 **Tamper-proof** — Plugin files are completely locked; agents cannot modify them.
 
 Zero telemetry. 100% local. MIT licensed.
 
 ---
 
-## 在 OpenClaw 中安装（推荐）
+## Install in OpenClaw (recommended)
 
-### 方式一：通过 clawhub.ai 一键安装
+### Option 1: One-click via clawhub.ai
 
-在 OpenClaw 对话框中直接说：
+In the OpenClaw chat, say:
 
 ```
 install openclaw-guard from clawhub
 ```
 
-或在 OpenClaw 设置界面搜索 `openclaw-guard` 安装。
-
-安装完成后 OpenClaw 会自动注册钩子，**无需手动配置**。
+Or search `openclaw-guard` in the OpenClaw settings. Hooks are registered automatically — no manual config needed.
 
 ---
 
-### 方式二：手动安装（npm）
+### Option 2: Manual install (npm)
 
-**第 1 步：安装包**
+**Step 1: Install the package**
 
 ```bash
 npm install -g openclaw-guard
 ```
 
-**第 2 步：创建配置文件**
+**Step 2: Create a config file**
 
-在你的项目根目录创建 `security-config.yaml`：
+Create `security-config.yaml` in your project root:
 
 ```yaml
 redis:
-  url: "redis://localhost:6379"   # 必须有 Redis
+  url: "redis://localhost:6379"
 
 storage:
   auditLog:
@@ -55,28 +53,28 @@ policy:
 
 alerting:
   channels:
-    - type: stdout                # 开发环境用 stdout，生产环境改为 webhook
+    - type: stdout        # use webhook in production
 
 failsafe:
   mode: fail-closed
 ```
 
-**第 3 步：创建策略目录**
+**Step 3: Create the policy directory**
 
 ```bash
 mkdir -p policies/agents
 ```
 
-复制内置策略示例（包含在 npm 包的 `policies/` 目录中）：
+Copy the built-in policy examples from the npm package:
 
 ```bash
 cp node_modules/openclaw-guard/policies/global-policy.yaml ./policies/
 cp node_modules/openclaw-guard/policies/agents/llm-agent-policy.yaml ./policies/agents/
 ```
 
-**第 4 步：注册为 OpenClaw 钩子**
+**Step 4: Register as an OpenClaw hook**
 
-编辑 `~/.openclaw/settings.json`，添加以下内容：
+Edit `~/.openclaw/settings.json`:
 
 ```json
 {
@@ -97,30 +95,30 @@ cp node_modules/openclaw-guard/policies/agents/llm-agent-policy.yaml ./policies/
 }
 ```
 
-> 如果 `openclaw-guard-hook` 命令不在 PATH 中，使用完整路径：
+> If `openclaw-guard-hook` is not in PATH, use the full path:
 > ```json
 > "command": "node /path/to/node_modules/openclaw-guard/src/cli/hook.js"
 > ```
 
-**第 5 步：验证安装**
+**Step 5: Verify installation**
 
 ```bash
-# 验证策略文件语法
+# Validate a policy file
 openclaw-guard validate ./policies/global-policy.yaml
 
-# 测试钩子是否正常工作
+# Test the hook
 echo '{"tool_name":"Delete","tool_input":{"file_path":"/tmp/test.txt"},"agent_id":"test"}' \
   | node node_modules/openclaw-guard/src/cli/hook.js
-# 预期输出：{"hookSpecificOutput":{"permissionDecision":"deny",...}}
+# Expected: {"hookSpecificOutput":{"permissionDecision":"deny",...}}
 ```
 
 ---
 
-## 快速配置：三个场景
+## Quick config: three scenarios
 
-### 场景 1：控制 LLM 花费
+### Scenario 1: Control LLM spending
 
-在 `policies/agents/llm-agent-policy.yaml` 中设置：
+`policies/agents/llm-agent-policy.yaml`:
 
 ```yaml
 version: "1"
@@ -130,22 +128,22 @@ defaultEffect: allow
 
 budget:
   daily:
-    tokens: 1000000    # 每日 100 万 token，超出自动阻断
+    tokens: 1000000    # 1M tokens/day — free use within limit
     calls: 500
   monthly:
-    tokens: 20000000   # 每月 2000 万 token
+    tokens: 20000000
   singleOp:
-    tokens: 100000     # 单次最多 10 万 token
+    tokens: 100000     # max 100K tokens per call
 
 rateLimits:
   - action: "call:llm"
     window: 1m
-    maxCount: 30       # 每分钟最多 30 次，限额内随便调
+    maxCount: 30       # max 30 calls/min
 ```
 
-### 场景 2：防止乱发帖
+### Scenario 2: Prevent unauthorized posting
 
-在 `policies/agents/social-agent-policy.yaml` 中设置：
+`policies/agents/social-agent-policy.yaml`:
 
 ```yaml
 version: "1"
@@ -161,12 +159,12 @@ rules:
       params:
         method: "POST"
     effect: deny
-    reason: "禁止自动发帖，需人工确认"
+    reason: "Auto-posting disabled; requires human approval"
 ```
 
-### 场景 3：防止乱删文件
+### Scenario 3: Prevent file deletion
 
-`policies/global-policy.yaml` 已内置，开箱即用：
+`policies/global-policy.yaml` — built-in, works out of the box:
 
 ```yaml
 rules:
@@ -175,107 +173,106 @@ rules:
     match:
       action: "delete:*"
     effect: deny
-    reason: "禁止任何删除操作"
+    reason: "All delete operations are blocked"
 ```
 
 ---
 
-## 查看审计日志
+## Audit log
 
 ```bash
-# 查看最近 50 条操作记录
+# View last 50 operations
 openclaw-guard audit --limit 50
 
-# 只看被拒绝的操作
+# View denied operations only
 openclaw-guard audit --decision deny
 
-# 查看特定代理的操作
+# View operations for a specific agent
 openclaw-guard audit --agent payment-agent --limit 100
 ```
 
 ---
 
-## 告警配置
+## Alert configuration
 
-超出预算或触发拒绝规则时，自动发送告警。支持 Webhook（飞书/Slack/钉钉）：
+Alerts fire automatically when budget is exceeded or a deny rule triggers. Supports webhook (Feishu / Slack / DingTalk):
 
 ```yaml
-# security-config.yaml
 alerting:
-  suppressWindowMs: 300000   # 5 分钟内相同告警只发一次
+  suppressWindowMs: 300000   # same alert fires at most once per 5 minutes
   channels:
-    # 飞书
+    # Feishu
     - type: webhook
       url: "https://open.feishu.cn/open-apis/bot/v2/hook/xxx"
     # Slack
     - type: webhook
       url: "https://hooks.slack.com/services/xxx"
-    # 钉钉
+    # DingTalk
     - type: webhook
       url: "https://oapi.dingtalk.com/robot/send?access_token=xxx"
 ```
 
 ---
 
-## 插件防篡改说明
+## Plugin tamper protection
 
-本插件会保护自身文件不被代理修改。任何对 `src/` 目录下文件的 Write/Edit/Delete 操作都会被自动拦截：
+This plugin protects its own files from agent modification. Any Write/Edit/Delete targeting files under `src/` is automatically blocked:
 
 ```
-[SecurityGuard 自我保护] 禁止修改或删除插件文件: src/cli/hook.js。
-插件文件不可修改，如需升级请通过官方渠道重新安装。
+[SecurityGuard self-protection] Modification of plugin file denied: src/cli/hook.js.
+Plugin files are immutable. To upgrade, reinstall via the official channel.
 ```
 
-如需升级插件：
+To upgrade:
 
 ```bash
 npm install -g openclaw-guard@latest
-# 或通过 clawhub 更新
+# or update via clawhub
 ```
 
 ---
 
 ## How it works
 
-每个请求依次经过：
+Each request passes through the following pipeline:
 
 ```
-请求进入
+Incoming request
   │
   ▼
-[0] 插件自身防篡改   ← 最高优先级，硬编码，不可绕过
+[0] Plugin self-protection   ← Hardcoded, highest priority, cannot be bypassed
   │
   ▼
-[1] 规则引擎         ← allow/deny 规则 + 域名过滤
+[1] Rule engine              ← allow/deny rules + domain filter
   │
   ▼
-[2] 预算/频率控制    ← token/调用次数/金额上限
+[2] Budget / rate limit      ← token/call/money limits
   │
   ▼
-[3] 时间窗口         ← 凌晨/节假日封锁
+[3] Time window              ← block during off-hours or holidays
   │
   ▼
-执行请求
+Execute request
   │
   ▼
-[4] 审计日志（异步） + 告警（异步）
+[4] Audit log (async) + Alerts (async)
 ```
 
 ---
 
 ## Failsafe
 
-| 模式 | Redis 不可用时 | 适用场景 |
-|------|--------------|----------|
-| `fail-closed`（默认） | 拒绝所有请求 | 生产环境，安全优先 |
-| `fail-open` | 放行并记录错误 | 开发/测试环境 |
+| Mode | When Redis is unavailable | Use case |
+|------|--------------------------|----------|
+| `fail-closed` (default) | Deny all requests | Production — security first |
+| `fail-open` | Allow and log error | Development / testing |
 
 ---
 
 ## Requirements
 
 - Node.js ≥ 22.0.0
-- Redis ≥ 6.0（预算/频率功能必须；不需要预算控制时可省略，配合 `fail-open` 使用）
+- Redis ≥ 6.0 (required for budget/rate features; omit with `fail-open` if not needed)
 
 ## License
 

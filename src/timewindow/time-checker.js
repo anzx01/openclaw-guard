@@ -1,5 +1,5 @@
 // src/timewindow/time-checker.js
-// 时间窗口封锁检查
+// Time window block checker
 
 import micromatch from 'micromatch';
 
@@ -10,7 +10,7 @@ export class TimeChecker {
   }
 
   /**
-   * 检查当前时间是否在封锁窗口内
+   * Check if the current time falls within a blocked window
    * @param {import('../types.js').RequestContext} ctx
    * @returns {import('../types.js').GuardResult|null}
    */
@@ -27,14 +27,14 @@ export class TimeChecker {
           return {
             decision: 'deny',
             ruleId: tr.id,
-            reason: `操作 ${ctx.action} 在时间段 ${tr.schedule.start}-${tr.schedule.end} (${tr.schedule.timezone}) 内被封锁`,
+            reason: `Action ${ctx.action} is blocked during ${tr.schedule.start}-${tr.schedule.end} (${tr.schedule.timezone})`,
           };
         }
         if (tr.effect === 'allow' && !blocked) {
           return {
             decision: 'deny',
             ruleId: tr.id,
-            reason: `操作 ${ctx.action} 仅允许在时间段 ${tr.schedule.start}-${tr.schedule.end} (${tr.schedule.timezone}) 内执行`,
+            reason: `Action ${ctx.action} is only allowed during ${tr.schedule.start}-${tr.schedule.end} (${tr.schedule.timezone})`,
           };
         }
       }
@@ -43,7 +43,7 @@ export class TimeChecker {
   }
 
   /**
-   * 判断当前时间是否在 schedule 定义的时间段内
+   * Check if the given time falls within the schedule window
    * @param {Date} now
    * @param {{ type: string, start: string, end: string, timezone: string }} schedule
    */
@@ -54,15 +54,15 @@ export class TimeChecker {
     const endMinutes = this.#parseTime(schedule.end);
 
     if (startMinutes <= endMinutes) {
-      // 普通时间段，如 09:00-18:00
+      // Normal range e.g. 09:00-18:00
       return currentMinutes >= startMinutes && currentMinutes < endMinutes;
     } else {
-      // 跨午夜时间段，如 22:00-06:00
+      // Cross-midnight range e.g. 22:00-06:00
       return currentMinutes >= startMinutes || currentMinutes < endMinutes;
     }
   }
 
-  /** 将 UTC 时间转换为指定时区的本地时间（小时和分钟） */
+  /** Convert UTC date to local hours/minutes in the given timezone */
   #toLocalTime(date, timezone) {
     try {
       const formatter = new Intl.DateTimeFormat('en-US', {
@@ -76,12 +76,12 @@ export class TimeChecker {
       const minutes = parseInt(parts.find((p) => p.type === 'minute')?.value ?? '0');
       return { hours: hours === 24 ? 0 : hours, minutes };
     } catch {
-      // 时区无效时回退到 UTC
+      // Fall back to UTC if timezone is invalid
       return { hours: date.getUTCHours(), minutes: date.getUTCMinutes() };
     }
   }
 
-  /** 将 "HH:MM" 转换为分钟数 */
+  /** Parse "HH:MM" string to total minutes */
   #parseTime(timeStr) {
     const [h, m] = timeStr.split(':').map(Number);
     return h * 60 + (m ?? 0);

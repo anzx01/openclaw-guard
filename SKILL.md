@@ -21,24 +21,24 @@ metadata:
 
 # OpenClaw Guard 🛡️
 
-四大核心保护，开箱即用：
+Four core protections, ready out of the box:
 
-| 保护 | 说明 |
-|------|------|
-| 💰 不乱花钱 | 设定 token/调用次数/金额上限，限额内随便用，超出自动阻断 |
-| 📢 不乱发帖 | 发帖/发邮件默认拒绝，需在策略中显式授权 |
-| 🗑️ 不乱删文件 | 所有删除操作全局拦截 |
-| 🔒 插件防篡改 | 插件自身文件完全锁定，不可被代理修改 |
+| Protection | Description |
+|------------|-------------|
+| 💰 No overspending | Set token/call/money limits. Free use within limits; auto-block when exceeded. |
+| 📢 No unauthorized posting | POST/email denied by default; must be explicitly allowed in policy. |
+| 🗑️ No file deletion | All delete operations blocked globally. |
+| 🔒 Tamper-proof | Plugin files are completely locked; agents cannot modify them. |
 
-## 安装
+## Install
 
 ```bash
 npm install -g openclaw-guard
 ```
 
-## 注册为 OpenClaw 钩子
+## Register as an OpenClaw hook
 
-编辑 `~/.openclaw/settings.json`：
+Edit `~/.openclaw/settings.json`:
 
 ```json
 {
@@ -59,9 +59,9 @@ npm install -g openclaw-guard
 }
 ```
 
-## 最小配置
+## Minimal config
 
-创建 `security-config.yaml`：
+Create `security-config.yaml`:
 
 ```yaml
 redis:
@@ -84,7 +84,7 @@ failsafe:
   mode: fail-closed
 ```
 
-## 控制 LLM 花费示例
+## Control LLM spending
 
 ```yaml
 # policies/agents/llm-agent-policy.yaml
@@ -95,10 +95,10 @@ defaultEffect: allow
 
 budget:
   daily:
-    tokens: 1000000    # 每日 100 万 token 上限
+    tokens: 1000000    # 1M tokens/day limit
     calls: 500
   singleOp:
-    tokens: 100000     # 单次最多 10 万 token
+    tokens: 100000     # max 100K tokens per call
 
 rateLimits:
   - action: "call:llm"
@@ -106,7 +106,7 @@ rateLimits:
     maxCount: 30
 ```
 
-## 查看审计日志
+## View audit log
 
 ```bash
 openclaw-guard audit --limit 50
@@ -117,4 +117,4 @@ openclaw-guard audit --decision deny
 
 - **Repository:** https://github.com/myaist/openclaw-guard
 - **License:** MIT
-- **Zero telemetry** — 无追踪，无网络请求，100% 本地运行
+- **Zero telemetry** — no tracking, no network requests, 100% local

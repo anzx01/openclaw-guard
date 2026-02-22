@@ -1,5 +1,5 @@
 // src/index.js
-// 主入口 - 导出所有模块
+// Main entry — exports all modules
 
 export { SecurityGuard } from './security-guard.js';
 export { PolicyLoader } from './engine/policy-loader.js';
@@ -19,8 +19,8 @@ export const PRIVACY = {
 };
 
 /**
- * 工厂函数：从配置文件创建并初始化 SecurityGuard 实例
- * @param {string} configPath  security-config.yaml 路径
+ * Factory function: create and initialize a SecurityGuard from a config file
+ * @param {string} configPath  path to security-config.yaml
  * @returns {Promise<SecurityGuard>}
  */
 export async function createGuard(configPath = './security-config.yaml') {
@@ -33,19 +33,19 @@ export async function createGuard(configPath = './security-config.yaml') {
   try {
     raw = fs.readFileSync(configPath, 'utf-8');
   } catch (err) {
-    throw new Error(`无法读取配置文件 ${configPath}: ${err.message}`);
+    throw new Error(`Cannot read config file ${configPath}: ${err.message}`);
   }
 
   let config;
   try {
     config = yaml.load(raw);
   } catch (err) {
-    throw new Error(`配置文件格式错误: ${err.message}`);
+    throw new Error(`Config file parse error: ${err.message}`);
   }
 
-  // 全局未捕获异常处理，防止进程崩溃
+  // Global unhandled rejection handler to prevent process crash
   process.on('unhandledRejection', (reason) => {
-    console.error('[SecurityGuard] 未处理的 Promise rejection:', reason);
+    console.error('[SecurityGuard] Unhandled Promise rejection:', reason);
   });
 
   let redis = null;
@@ -57,21 +57,21 @@ export async function createGuard(configPath = './security-config.yaml') {
       lazyConnect: true,
       maxRetriesPerRequest: 2,
       connectTimeout: 3000,
-      enableOfflineQueue: false,  // 连接断开时不排队，直接报错触发 failsafe
+      enableOfflineQueue: false,  // Do not queue when disconnected; fail immediately to trigger failsafe
     });
     redis.on('error', (err) => {
-      // 仅记录，不暴露内部细节给外部
-      console.error('[SecurityGuard] Redis 连接错误');
+      // Log only; do not expose internal details
+      console.error('[SecurityGuard] Redis connection error');
     });
-    // 尝试连接，失败时根据 failsafe 模式决定是否继续
+    // Attempt connection; on failure apply failsafe mode
     try {
       await redis.connect();
     } catch {
       const mode = config.failsafe?.mode ?? 'fail-closed';
       if (mode === 'fail-closed') {
-        throw new Error('Redis 连接失败，fail-closed 模式下无法启动');
+        throw new Error('Redis connection failed; cannot start in fail-closed mode');
       }
-      console.error('[SecurityGuard] Redis 连接失败，以 fail-open 模式运行（预算/频率控制不可用）');
+      console.error('[SecurityGuard] Redis unavailable; running in fail-open mode (budget/rate control disabled)');
       redis = null;
     }
   }

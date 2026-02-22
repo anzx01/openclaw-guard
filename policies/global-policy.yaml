@@ -1,24 +1,24 @@
 # global-policy.yaml
-# 全局安全策略：不乱删文件、不乱发帖、基础防护
+# Global security policy: no file deletion, no unauthorized posting, baseline protection
 version: "1"
 scope: global
-defaultEffect: allow   # 全局默认放行，通过 deny 规则精确拦截
+defaultEffect: allow   # allow by default; use deny rules for precise blocking
 
 rules:
-  # ── 文件保护 ──────────────────────────────────────────────
+  # ── File protection ───────────────────────────────────────────
   - id: deny-delete-file
     priority: 1
     match:
       action: "delete:file"
     effect: deny
-    reason: "禁止删除文件，如需删除请联系管理员"
+    reason: "File deletion is not allowed; contact an admin if needed"
 
   - id: deny-delete-all
     priority: 1
     match:
       action: "delete:*"
     effect: deny
-    reason: "禁止任何删除操作"
+    reason: "All delete operations are blocked"
 
   - id: deny-shell-rm
     priority: 1
@@ -27,17 +27,17 @@ rules:
       params:
         command: "rm *"
     effect: deny
-    reason: "禁止通过 shell 执行删除命令"
+    reason: "Shell delete commands are not allowed"
 
-  # ── 系统操作防护 ──────────────────────────────────────────
+  # ── System operation protection ───────────────────────────────
   - id: deny-shell
     priority: 2
     match:
       action: "execute:shell"
     effect: deny
-    reason: "禁止执行 shell 命令"
+    reason: "Shell execution is not allowed"
 
-  # ── 发帖/消息发送控制（由代理级策略细化） ─────────────────
+  # ── Read/write allow rules (refined by agent-level policies) ──
   - id: allow-read
     priority: 10
     match:
@@ -50,7 +50,7 @@ rules:
       action: "write:file"
     effect: allow
 
-# 域名白名单：只允许访问已知安全域名
+# Domain whitelist: only allow access to known safe domains
 domainFilter:
   mode: whitelist
   list:
@@ -59,7 +59,7 @@ domainFilter:
     - "api.anthropic.com"
     - "*.trusted.com"
 
-# 时间窗口：凌晨禁止所有写操作（防止异常时段操作）
+# Time window: block all write operations during off-hours (00:00-06:00)
 timeRestrictions:
   - id: block-write-midnight
     action: "write:*"

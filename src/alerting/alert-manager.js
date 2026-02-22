@@ -1,5 +1,5 @@
 // src/alerting/alert-manager.js
-// 实时告警管理（异步，带频率抑制）
+// Real-time alert manager (async, with suppression window)
 
 export class AlertManager {
   #channels;
@@ -8,7 +8,7 @@ export class AlertManager {
 
   /**
    * @param {Array<{type: string, url?: string}>} channels
-   * @param {number} suppressWindowMs  默认 300000 (5分钟)
+   * @param {number} suppressWindowMs  default 300000 (5 minutes)
    */
   constructor(channels = [], suppressWindowMs = 300000) {
     this.#channels = channels;
@@ -16,7 +16,7 @@ export class AlertManager {
   }
 
   /**
-   * 检查并发送告警（异步，不阻塞主链路）
+   * Send alert (async, non-blocking)
    * @param {string} event
    * @param {string} level  'INFO' | 'WARNING' | 'CRITICAL'
    * @param {object} data
@@ -25,7 +25,7 @@ export class AlertManager {
     const suppressKey = `${event}:${data.agentId ?? ''}`;
     const now = Date.now();
 
-    // CRITICAL 不受抑制
+    // CRITICAL alerts bypass suppression
     if (level !== 'CRITICAL') {
       const lastSent = this.#suppressMap.get(suppressKey) ?? 0;
       if (now - lastSent < this.#suppressWindowMs) return;
@@ -43,10 +43,10 @@ export class AlertManager {
       suggestion: data.suggestion,
     };
 
-    // 异步发送，不等待结果
+    // Fire-and-forget, do not block
     for (const channel of this.#channels) {
       this.#sendToChannel(channel, alert).catch((err) => {
-        console.error(`[SecurityGuard] 告警发送失败 (${channel.type}):`, err.message);
+        console.error(`[SecurityGuard] Alert send failed (${channel.type}):`, err.message);
       });
     }
   }
@@ -65,7 +65,7 @@ export class AlertManager {
     }
   }
 
-  /** 检查预算剩余并在需要时发送告警 */
+  /** Check remaining budget and send alert if below threshold */
   async checkBudgetAlert(agentId, remaining) {
     if (!remaining) return;
     const ratio = remaining.ratio ?? 1;
@@ -75,8 +75,8 @@ export class AlertManager {
     const pct = Math.round(ratio * 100);
     await this.send('budget_threshold', level, {
       agentId,
-      message: `代理 ${agentId} 预算剩余 ${pct}%（已用 ${remaining.used}/${remaining.limit}）`,
-      suggestion: '请检查代理行为或调整预算配置',
+      message: `Agent ${agentId} budget remaining: ${pct}% (used ${remaining.used}/${remaining.limit})`,
+      suggestion: 'Check agent behavior or adjust budget config',
     });
   }
 }

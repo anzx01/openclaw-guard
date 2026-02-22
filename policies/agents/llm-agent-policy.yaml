@@ -1,41 +1,41 @@
 # agents/llm-agent-policy.yaml
-# 大模型调用代理策略：设定花费上限，限额内随便调用
+# LLM agent policy: set spending limits, free use within limits
 version: "1"
 scope: agent
 target: "llm-agent"
-defaultEffect: allow   # 限额内全部放行
+defaultEffect: allow   # allow all within limits
 
 rules:
-  # 允许所有模型调用（限额由 budget 控制，不限制模型种类）
+  # Allow all LLM calls (limits enforced by budget, no model restrictions)
   - id: allow-llm-calls
     priority: 10
     match:
       action: "call:llm"
     effect: allow
 
-# ── 花费上限（超出则自动阻断）────────────────────────────────
+# ── Spending limits (auto-block when exceeded) ────────────────
 budget:
   daily:
-    tokens: 1000000     # 每日 token 上限：100 万（约 $3-5，视模型而定）
-    calls: 500          # 每日调用次数上限：500 次
+    tokens: 1000000     # daily token limit: 1M (approx $3-5 depending on model)
+    calls: 500          # daily call limit: 500
   monthly:
-    tokens: 20000000    # 每月 token 上限：2000 万
-    calls: 10000        # 每月调用次数上限：1 万次
+    tokens: 20000000    # monthly token limit: 20M
+    calls: 10000        # monthly call limit: 10K
   singleOp:
-    tokens: 100000      # 单次请求 token 上限：10 万（防止单次超长上下文）
+    tokens: 100000      # per-request token limit: 100K (prevents runaway context)
 
-# ── 频率限制（防止短时间内爆发式调用耗尽限额）────────────────
+# ── Rate limits (prevent burst usage from exhausting budget) ──
 rateLimits:
   - action: "call:llm"
     window: 1m
-    maxCount: 30        # 每分钟最多 30 次（限额内可持续调用）
+    maxCount: 30        # max 30 calls/min (sustained use within limit is fine)
   - action: "call:llm"
     window: 1h
-    maxCount: 300       # 每小时最多 300 次
+    maxCount: 300       # max 300 calls/hour
 
-# ── 说明 ──────────────────────────────────────────────────────
-# 1. 不限制模型种类，GPT-4o / Claude Opus / Gemini 均可使用
-# 2. token 消耗由调用方在 params.tokens 中上报，或由插件从响应中读取
-# 3. 超出 daily/monthly 上限后，当天/当月剩余请求全部被阻断
-# 4. 次日/次月自动重置（Redis TTL 自动过期）
-# 5. 剩余预算 < 20% 时触发 WARNING 告警，耗尽时触发 CRITICAL 告警
+# ── Notes ─────────────────────────────────────────────────────
+# 1. No model restrictions — GPT-4o / Claude Opus / Gemini all allowed
+# 2. Token usage reported by caller via params.tokens, or read from response
+# 3. Once daily/monthly limit is hit, all remaining requests are blocked
+# 4. Resets automatically next day/month (Redis TTL auto-expiry)
+# 5. WARNING alert at <20% remaining; CRITICAL alert when exhausted

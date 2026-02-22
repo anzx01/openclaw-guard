@@ -1,5 +1,5 @@
 // src/security-guard.js
-// 主控制器：串联所有模块，实现 ProviderMiddleware 接口
+// Main controller: chains all modules, implements ProviderMiddleware interface
 
 import { randomUUID } from 'crypto';
 import { PolicyLoader } from './engine/policy-loader.js';
@@ -26,52 +26,52 @@ export class SecurityGuard {
   constructor(config, redis = null) {
     this.#failsafeMode = config.failsafe?.mode ?? 'fail-closed';
 
-    // 策略加载器
+    // Policy loader
     this.#loader = new PolicyLoader(
       config.policy?.path ?? './policies',
       config.policy?.defaultEffect ?? 'deny'
     );
 
-    // 规则引擎
+    // Rule engine
     this.#ruleEngine = new RuleEngine(this.#loader);
 
-    // 预算控制器（需要 Redis）
+    // Budget controller (requires Redis)
     const agentConfigs = new Map(
       Object.entries(config.agents ?? {}).map(([id, cfg]) => [id, cfg])
     );
     this.#budgetController = new BudgetController(redis, agentConfigs);
 
-    // 时间窗口检查
+    // Time window checker
     this.#timeChecker = new TimeChecker(this.#loader);
 
-    // 审计日志
+    // Audit logger
     this.#auditLogger = new AuditLogger({
       backend: config.storage?.auditLog?.backend ?? 'stdout',
       path: config.storage?.auditLog?.path,
       customPiiPatterns: config.pii?.customPatterns,
       onOverflow: (count) => {
         this.#alertManager?.send('audit_queue_overflow', 'CRITICAL', {
-          message: `审计日志队列溢出，已丢弃 ${count} 条日志`,
-          suggestion: '请检查存储后端是否正常',
+          message: `Audit queue overflow, dropped ${count} entries`,
+          suggestion: 'Check if the storage backend is healthy',
         });
       },
     });
 
-    // 告警管理器
+    // Alert manager
     this.#alertManager = new AlertManager(
       config.alerting?.channels ?? [],
       config.alerting?.suppressWindowMs ?? 300000
     );
 
-    // 策略加载错误告警
+    // Alert on policy load errors
     this.#loader.on('policy:error', (filePath, err) => {
       this.#alertManager.send('rule_denied', 'WARNING', {
-        message: `策略文件加载失败: ${filePath} — ${err.message}`,
+        message: `Failed to load policy file: ${filePath} — ${err.message}`,
       });
     });
   }
 
-  /** 初始化：加载策略、启动审计 worker */
+  /** Initialize: load policies and start audit worker */
   async init() {
     await this.#loader.load();
     this.#auditLogger.start();
@@ -79,21 +79,21 @@ export class SecurityGuard {
   }
 
   /**
-   * 请求前拦截（ProviderMiddleware.beforeRequest）
-   * @param {object} ctx  RequestContext（requestId 可选，未提供时自动生成）
+   * Pre-request interceptor (ProviderMiddleware.beforeRequest)
+   * @param {object} ctx  RequestContext (requestId is auto-generated if not provided)
    * @returns {Promise<{decision: string, ruleId?: string, reason?: string}>}
    */
   async beforeRequest(ctx) {
-    // 补全 requestId 和 timestamp
+    // Fill in requestId and timestamp if not provided
     ctx.requestId = ctx.requestId ?? randomUUID();
     ctx.timestamp = ctx.timestamp ?? Date.now();
 
     if (!this.#ready) {
-      return this.#failsafe('插件未初始化');
+      return this.#failsafe('Plugin not initialized');
     }
 
     try {
-      // 1. 规则引擎
+      // 1. Rule engine
       const ruleResult = this.#ruleEngine.evaluate(ctx);
       if (ruleResult.decision === 'deny') {
         this.#auditLogger.enqueue(ctx, ruleResult);
@@ -101,7 +101,7 @@ export class SecurityGuard {
         return ruleResult;
       }
 
-      // 2. 域名过滤
+      // 2. Domain filter
       const domainResult = this.#ruleEngine.evaluateDomain(ctx);
       if (domainResult?.decision === 'deny') {
         this.#auditLogger.enqueue(ctx, domainResult);
@@ -109,14 +109,14 @@ export class SecurityGuard {
         return domainResult;
       }
 
-      // 3. 预算/频率控制
+      // 3. Budget / rate limit
       let budgetResult = { decision: 'allow' };
       if (this.#budgetController) {
         try {
           budgetResult = await this.#budgetController.check(ctx);
         } catch (err) {
-          console.error('[SecurityGuard] 预算检查失败:', err.message);
-          budgetResult = this.#failsafe('预算服务不可用');
+          console.error('[SecurityGuard] Budget check failed:', err.message);
+          budgetResult = this.#failsafe('Budget service unavailable');
         }
       }
       if (budgetResult.decision === 'deny') {
@@ -125,7 +125,7 @@ export class SecurityGuard {
         return budgetResult;
       }
 
-      // 4. 时间窗口
+      // 4. Time window
       const timeResult = this.#timeChecker.check(ctx);
       if (timeResult?.decision === 'deny') {
         this.#auditLogger.enqueue(ctx, timeResult);
@@ -133,34 +133,34 @@ export class SecurityGuard {
         return timeResult;
       }
 
-      // 全部通过
+      // All checks passed
       this.#auditLogger.enqueue(ctx, { decision: 'allow' });
       return { decision: 'allow' };
 
     } catch (err) {
-      console.error('[SecurityGuard] 检查异常:', err.message);
-      return this.#failsafe('内部错误');
+      console.error('[SecurityGuard] Check error:', err.message);
+      return this.#failsafe('Internal error');
     }
   }
 
   /**
-   * 请求后钩子（ProviderMiddleware.afterRequest）
+   * Post-request hook (ProviderMiddleware.afterRequest)
    * @param {object} ctx
    * @param {object} result  RequestResult
    */
   async afterRequest(ctx, result) {
-    // 更新审计日志中的响应状态
+    // Record response status in audit log
     this.#auditLogger.enqueue(ctx, { decision: 'allow' }, result);
 
-    // 扣减预算
+    // Deduct budget
     if (this.#budgetController) {
       try {
         await this.#budgetController.deduct(ctx, result);
-        // 检查预算告警
+        // Check budget alert threshold
         const remaining = await this.#budgetController.getRemainingBudget(ctx.agentId);
         await this.#alertManager.checkBudgetAlert(ctx.agentId, remaining);
       } catch (err) {
-        console.error('[SecurityGuard] 预算扣减失败:', err.message);
+        console.error('[SecurityGuard] Budget deduction failed:', err.message);
       }
     }
   }
@@ -176,18 +176,18 @@ export class SecurityGuard {
       console.error(`[SecurityGuard] fail-open: ${reason}`);
       return { decision: 'allow', reason: `[fail-open] ${reason}` };
     }
-    return { decision: 'deny', reason: `[fail-closed] 安全检查不可用: ${reason}` };
+    return { decision: 'deny', reason: `[fail-closed] Security check unavailable: ${reason}` };
   }
 
   #sendDenyAlert(ctx, result, event) {
     this.#alertManager.send(event, 'INFO', {
       agentId: ctx.agentId,
       requestId: ctx.requestId,
-      message: `请求被拒绝: ${result.reason ?? event}`,
+      message: `Request denied: ${result.reason ?? event}`,
     }).catch(() => {});
   }
 
-  // 暴露内部组件供测试和 CLI 使用
+  // Expose internals for testing and CLI
   get loader() { return this.#loader; }
   get auditLogger() { return this.#auditLogger; }
   get alertManager() { return this.#alertManager; }

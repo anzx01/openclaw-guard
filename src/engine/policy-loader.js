@@ -1,5 +1,5 @@
 // src/engine/policy-loader.js
-// 策略文件加载、热更新、版本管理
+// Policy file loading, hot-reload, and version snapshots
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -67,20 +67,20 @@ export class PolicyLoader extends EventEmitter {
       this.emit('policy:loaded', key, policy);
     } catch (err) {
       this.emit('policy:error', filePath, err);
-      console.error(`[SecurityGuard] 策略加载失败 ${filePath}: ${err.message}`);
+      console.error(`[SecurityGuard] Failed to load policy ${filePath}: ${err.message}`);
     }
   }
 
   #validate(data, filePath) {
     if (!data?.version || !data?.scope) {
-      throw new Error(`策略文件缺少必填字段 version/scope: ${filePath}`);
+      throw new Error(`Policy file missing required fields version/scope: ${filePath}`);
     }
     if (data.scope === 'agent' && !data.target) {
-      throw new Error(`scope=agent 时 target 必填: ${filePath}`);
+      throw new Error(`target is required when scope=agent: ${filePath}`);
     }
     for (const tr of data.timeRestrictions ?? []) {
       if (!tr.schedule?.timezone) {
-        throw new Error(`时间规则 ${tr.id} 缺少 timezone 字段: ${filePath}`);
+        throw new Error(`Time restriction ${tr.id} is missing timezone: ${filePath}`);
       }
     }
     if (!Array.isArray(data.rules)) data.rules = [];
@@ -110,7 +110,7 @@ export class PolicyLoader extends EventEmitter {
     this.#watcher.on('unlink', () => { this.#policies.clear(); this.#loadAll(); });
   }
 
-  /** 返回适用于 agentId 的策略列表（agent > global） */
+  /** Return policies applicable to agentId (agent > global) */
   getPoliciesFor(agentId) {
     const result = [];
     const agent = this.#policies.get(`agent:${agentId}`);
