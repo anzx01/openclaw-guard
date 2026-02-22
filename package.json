@@ -1,0 +1,50 @@
+{
+  "name": "openclaw-guard",
+  "version": "1.0.0",
+  "description": "🛡️ Universal security control plugin for OpenClaw agents — rule engine, budget control, audit log, real-time alerts. Zero telemetry.",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "openclaw-guard": "./src/cli/index.js",
+    "openclaw-guard-hook": "./src/cli/hook.js"
+  },
+  "scripts": {
+    "start": "node src/cli/index.js",
+    "test": "node --test tests/*.test.js",
+    "lint": "node --check src/**/*.js"
+  },
+  "keywords": [
+    "openclaw",
+    "security",
+    "guard",
+    "ai-agent",
+    "rule-engine",
+    "budget-control",
+    "audit-log",
+    "rate-limit",
+    "no-telemetry"
+  ],
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "os": ["darwin", "linux", "win32"],
+  "dependencies": {
+    "ioredis": "^5.3.2",
+    "js-yaml": "^4.1.0",
+    "micromatch": "^4.0.5",
+    "chokidar": "^3.5.3"
+  },
+  "files": [
+    "src/",
+    "policies/",
+    "README.md",
+    "SKILL.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "private": false
+}

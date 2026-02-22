@@ -1,0 +1,8 @@
+{
+  "name": "openclaw-guard",
+  "version": "1.0.0",
+  "description": "Security control plugin for OpenClaw agents. Prevents overspending, unauthorized posting, and file deletion.",
+  "lifecycle": {
+    "before_tool_use": "./src/cli/hook.js"
+  }
+}
