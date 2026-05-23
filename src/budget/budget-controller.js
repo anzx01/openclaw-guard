@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 OpenClaw Guard contributors
 // src/budget/budget-controller.js
 // Budget and rate-limit controller (Redis atomic operations)
 

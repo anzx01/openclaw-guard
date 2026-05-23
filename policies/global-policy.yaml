@@ -50,14 +50,15 @@ rules:
       action: "write:file"
     effect: allow
 
-# Domain whitelist: only allow access to known safe domains
+# Domain whitelist: only allow access to known safe domains.
+# Replace *.company.com and *.trusted.com with your actual domains before deploying.
 domainFilter:
   mode: whitelist
   list:
-    - "*.company.com"
+    - "*.company.com"       # example placeholder — replace with your own domain
     - "api.openai.com"
     - "api.anthropic.com"
-    - "*.trusted.com"
+    - "*.trusted.com"       # example placeholder — replace with your own domain
 
 # Time window: block all write operations during off-hours (00:00-06:00)
 timeRestrictions:

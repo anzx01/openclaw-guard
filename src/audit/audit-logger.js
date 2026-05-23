@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 OpenClaw Guard contributors
 // src/audit/audit-logger.js
 // Async audit logger (in-memory queue + background worker)
 

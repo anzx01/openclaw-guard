@@ -46,6 +46,10 @@ License metadata was reviewed from the installed npm package metadata on
 | standard-as-callback | MIT |
 | to-regex-range | MIT |
 
+Note: `argparse` uses the `Python-2.0` SPDX identifier, which refers to the
+Python Software Foundation License 2.0 — a permissive open-source license
+unrelated to the GPL family.
+
 No GPL, AGPL, or LGPL dependency was found in the installed dependency tree at
 the time of review.
 

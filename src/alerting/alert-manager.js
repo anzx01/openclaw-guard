@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 OpenClaw Guard contributors
 // src/alerting/alert-manager.js
 // Real-time alert manager (async, with suppression window)
 

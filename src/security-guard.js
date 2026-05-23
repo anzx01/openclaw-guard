@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 OpenClaw Guard contributors
 // src/security-guard.js
 // Main controller: chains all modules, implements ProviderMiddleware interface
 

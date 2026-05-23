@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 OpenClaw Guard contributors
 // src/engine/rule-engine.js
 // Rule matching and decision engine
 

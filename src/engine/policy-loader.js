@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 OpenClaw Guard contributors
 // src/engine/policy-loader.js
 // Policy file loading, hot-reload, and version snapshots
 

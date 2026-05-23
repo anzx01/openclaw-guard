@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 OpenClaw Guard contributors
 // src/cli/hook.js
 // OpenClaw PreToolUse / before_tool_use hook entry point
 // Receives JSON via stdin, outputs decision via stdout
