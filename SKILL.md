@@ -1,6 +1,6 @@
 ---
 name: openclaw-guard
-description: Universal security control for OpenClaw agents. Prevents overspending (token/money budgets), unauthorized posting, file deletion, and protects itself from tampering. Zero telemetry, 100% local.
+description: Universal security control for OpenClaw agents. Prevents overspending (token/money budgets), unauthorized posting, file deletion, and protects itself from tampering. No telemetry by default; webhook alerts only if configured.
 version: 1.0.0
 metadata:
   openclaw:
@@ -117,4 +117,4 @@ openclaw-guard audit --decision deny
 
 - **Repository:** https://github.com/myaist/openclaw-guard
 - **License:** MIT
-- **Zero telemetry** — no tracking, no network requests, 100% local
+- **Privacy:** no telemetry or tracking; outbound requests only occur for user-configured alert webhooks

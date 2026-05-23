@@ -1,0 +1,47 @@
+# OpenClaw Guard example configuration.
+# Copy this file to security-config.yaml and adjust it for your environment.
+# Do not commit real webhook URLs, Redis passwords, API keys, or audit logs.
+
+redis:
+  url: "redis://localhost:6379"
+  tls: false
+
+storage:
+  auditLog:
+    backend: file
+    path: "./logs/audit"
+
+policy:
+  path: "./policies"
+  defaultEffect: deny
+
+alerting:
+  suppressWindowMs: 300000
+  channels:
+    - type: stdout
+    # Production webhook example. Replace with your own secret URL locally.
+    # - type: webhook
+    #   url: "https://example.com/openclaw-guard/webhook"
+
+failsafe:
+  mode: fail-closed
+
+agents:
+  payment-agent:
+    budget:
+      daily:
+        moneyCny: 500
+        calls: 50
+      singleOp:
+        moneyCny: 100
+    rateLimits:
+      - action: "call:payment-api"
+        window: 1m
+        maxCount: 3
+
+pii:
+  customPatterns: []
+  # Example:
+  # - name: internal_id
+  #   pattern: "EMP-\\d{6}"
+  #   mask: "[EMPLOYEE_ID]"

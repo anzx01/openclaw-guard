@@ -8,7 +8,7 @@ Universal security control plugin for OpenClaw agents.
 - 🗑️ **No file deletion** — All delete operations blocked globally.
 - 🔒 **Tamper-proof** — Plugin files are completely locked; agents cannot modify them.
 
-Zero telemetry. 100% local. MIT licensed.
+No telemetry by default. Local-first; external network requests occur only when you configure alert webhooks. MIT licensed.
 
 ---
 
@@ -36,7 +36,13 @@ npm install -g openclaw-guard
 
 **Step 2: Create a config file**
 
-Create `security-config.yaml` in your project root:
+Copy the example config to `security-config.yaml` in your project root:
+
+```bash
+cp node_modules/openclaw-guard/security-config.example.yaml ./security-config.yaml
+```
+
+Then adjust it for your environment:
 
 ```yaml
 redis:
@@ -53,7 +59,7 @@ policy:
 
 alerting:
   channels:
-    - type: stdout        # use webhook in production
+    - type: stdout        # use webhook locally only if you configure one
 
 failsafe:
   mode: fail-closed
@@ -195,7 +201,7 @@ openclaw-guard audit --agent payment-agent --limit 100
 
 ## Alert configuration
 
-Alerts fire automatically when budget is exceeded or a deny rule triggers. Supports webhook (Feishu / Slack / DingTalk):
+Alerts fire automatically when budget is exceeded or a deny rule triggers. Supports webhook channels such as Feishu, Slack, or DingTalk. Do not commit real webhook URLs; keep them in your ignored local `security-config.yaml` or a secret manager.
 
 ```yaml
 alerting:
@@ -203,13 +209,13 @@ alerting:
   channels:
     # Feishu
     - type: webhook
-      url: "https://open.feishu.cn/open-apis/bot/v2/hook/xxx"
+      url: "https://example.com/openclaw-guard/feishu-webhook"
     # Slack
     - type: webhook
-      url: "https://hooks.slack.com/services/xxx"
+      url: "https://example.com/openclaw-guard/slack-webhook"
     # DingTalk
     - type: webhook
-      url: "https://oapi.dingtalk.com/robot/send?access_token=xxx"
+      url: "https://example.com/openclaw-guard/dingtalk-webhook"
 ```
 
 ---
@@ -276,4 +282,6 @@ Execute request
 
 ## License
 
-MIT
+MIT. See [LICENSE](./LICENSE).
+
+Third-party dependency license metadata is summarized in [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).

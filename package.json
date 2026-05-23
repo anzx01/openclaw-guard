@@ -1,7 +1,7 @@
 {
   "name": "openclaw-guard",
   "version": "1.0.0",
-  "description": "🛡️ Universal security control plugin for OpenClaw agents — rule engine, budget control, audit log, real-time alerts. Zero telemetry.",
+  "description": "Universal security control plugin for OpenClaw agents: rule engine, budget control, audit log, real-time alerts. No telemetry by default.",
   "main": "src/index.js",
   "type": "module",
   "bin": {
@@ -10,8 +10,8 @@
   },
   "scripts": {
     "start": "node src/cli/index.js",
-    "test": "node --test tests/*.test.js",
-    "lint": "node --check src/**/*.js"
+    "test": "node --test",
+    "lint": "node scripts/check-syntax.mjs"
   },
   "keywords": [
     "openclaw",
@@ -24,8 +24,16 @@
     "rate-limit",
     "no-telemetry"
   ],
-  "author": "",
+  "author": "OpenClaw Guard contributors",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/myaist/openclaw-guard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/myaist/openclaw-guard/issues"
+  },
+  "homepage": "https://github.com/myaist/openclaw-guard#readme",
   "engines": {
     "node": ">=22.0.0"
   },
@@ -38,9 +46,14 @@
   },
   "files": [
     "src/",
+    "scripts/",
     "policies/",
     "README.md",
-    "SKILL.md"
+    "SKILL.md",
+    "LICENSE",
+    "SECURITY.md",
+    "THIRD_PARTY_NOTICES.md",
+    "security-config.example.yaml"
   ],
   "publishConfig": {
     "access": "public",

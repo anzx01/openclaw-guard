@@ -3,5 +3,9 @@ node_modules/
 logs/
 *.log
 .env
+.env.*
+!.env.example
 security-config.yaml
-package-lock.json
+*.tgz
+coverage/
+.npm/

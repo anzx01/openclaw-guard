@@ -14,8 +14,9 @@ export const VERSION = '1.0.0';
 export const PRIVACY = {
   telemetry: false,
   tracking: false,
-  externalRequests: false,
   dataCollection: false,
+  externalRequestsByDefault: false,
+  userConfiguredExternalRequests: ['alert-webhook'],
 };
 
 /**
